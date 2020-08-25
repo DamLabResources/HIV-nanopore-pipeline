@@ -1,0 +1,71 @@
+# Snake file number 5 
+
+container: "docker://nanozoo/pomoxis"
+
+"""
+Complete list of Pomoxis QCs: https://nanoporetech.github.io/pomoxis/programs.html
+
+We'll be using the follwoing QCs in the rules. More can be added if desired for 
+the above
+
+* Assess_assembly
+* Coverage_from_bam
+* assess_homopolymers
+* common_errors_from_bam #ERROR: This is not applicable, as it is not from consensus
+
+A "find_indels" QC exists, but not included in intial version
+
+###############################################################
+###### TODO: Output the QCs as a snakemake --report file ######
+###############################################################
+
+"""
+
+rule create_evaluation_dir:
+    input:
+        X
+    output:
+        directory("Pipeline_QC")
+    shell:
+        """
+        mkdir {output}
+        """
+
+#rule get_depth:
+#    input:
+#        bam = ancient("{dir}/calls2ref.bam"),
+#    output:
+#        depth = directory("Pipeline_QC/depth")
+#    shell:
+#        """
+#        coverage_from_bam {input.bam} -s 1000 -p {output.depth}
+#        """
+
+#    input:
+#        bam = ancient("{dir}/calls2ref.bam"),
+#    output:
+#        stats = "{dir}/calls2ref_stats.txt"
+#    log:
+#        "{dir}/basecall_stats.log"
+#    resources:
+#        gpu = 0
+#    shell:
+#        """
+#        stats_from_bam {input.bam} -o {output.stats}
+#        """
+
+rule assess_consensus:
+    input:
+        consensus = ancient("{runid}/{dir}/consensus.fasta"),
+        truth = "ref.fasta",
+    output:
+        summ = "{runid,[^/]+}/{dir}/assess{suffix,[^/]*}/consensus_to_truth_summ.txt",
+        bam = "{runid,[^/]+}/{dir}/assess{suffix,[^/]*}/consensus_to_truth.bam",
+        stats = "{runid,[^/]+}/{dir}/assess{suffix,[^/]*}/consensus_to_truth_stats.txt",
+    threads: 8
+    resources:
+        gpu = 0
+    shell:
+        """
+        assess_assembly -i {input.consensus} -r {input.truth} -p some_param -t {threads}
+        """

@@ -1,0 +1,14 @@
+base_dir: 'HIV_nanopore_pipeline'
+file_dir: 'test'
+
+# ['jlat_106','jlat_154','u1_chr19','u1_chr2','u1_chrX']
+genomes: ['jlat_106']
+train_end: [39401]
+
+references: ["refs/jlat_106.fasta"]
+
+CHUNK_LEN: 1050
+SEED: 255
+
+# What to do for testing
+train_medaka: true

@@ -1,0 +1,41 @@
+rule align_basecalls_to_draft:
+    input:
+        basecalls = "medaka_pipeline_outputs/guppy/{genomes}.fastq",
+        draft     = "medaka_pipeline_outputs/guppy/assembly/racon/{genomes}_polished_assembly.fa",
+    output:
+        calls2draft_bam = "medaka_pipeline_outputs/guppy/assembly/racon/align/{genomes}_calls2draft.bam",
+        calls2draft_bai = "medaka_pipeline_outputs/guppy/assembly/racon/align/{genomes}_calls2draft.bam.bai",
+    threads: 8
+    resources:
+        gpu = 0
+    singularity:
+        "docker://nanozoo/pomoxis"
+    shell:
+        """
+        mini_align -P -m -i {input.basecalls} -r {input.draft} -p hiv_aln -t {threads}
+        
+        mv hiv_aln.bam {output.calls2draft_bam}
+        mv hiv_aln.bam.bai {output.calls2draft_bai}
+        """
+        
+rule align_reference_to_draft:
+    input:
+        ref   = "refs/{genomes}.fasta",
+        draft = "medaka_pipeline_outputs/guppy/assembly/racon/{genomes}_polished_assembly.fa",
+    output:
+        truth2draft_bam = "medaka_pipeline_outputs/guppy/assembly/racon/align/{genomes}_truth2draft.bam",
+        truth2draft_bai = "medaka_pipeline_outputs/guppy/assembly/racon/align/{genomes}_truth2draft.bam.bai"
+    threads: 8
+    resources:
+        gpu = 0
+    params:
+        chunk_size = config["CHUNK_LEN"],
+    singularity:
+        "docker://nanozoo/pomoxis"
+    shell:
+        """
+        mini_align -c {params.chunk_size} -P -m -i {input.ref} -r {input.draft} -p hiv_aln -t {threads}
+        
+        mv hiv_aln.bam {output.truth2draft_bam}
+        mv hiv_aln.bam.bai {output.truth2draft_bai}
+        """

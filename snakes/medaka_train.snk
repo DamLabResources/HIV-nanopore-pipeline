@@ -1,0 +1,59 @@
+def pair_refname_and_trian_end(refname, train_end):
+    return [f"{ref}:0-{end}" for ref,end in zip(refname, train_end)]
+
+def comma_join_params(item):
+    return ','.join(item)
+
+rule medaka_feature_creation:    
+    input:
+        calls2draft = "medaka_pipeline_outputs/guppy/assembly/racon/align/combined_calls2draft.bam",
+        truth2draft = "medaka_pipeline_outputs/guppy/assembly/racon/align/combined_truth2draft.bam",
+    output:
+        features = "medaka_pipeline_outputs/features/hiv_train_features.hdf5",
+    threads: 8
+    resources:
+        # NOTE: currently we will only use at most a single GPU
+        gpu = 1,
+    params:
+        genomes = comma_join_params(config["genomes"]),
+        
+        paired_refname_and_trian_end = pair_refname_and_trian_end(["utg000002l"], config["train_end"]),
+                  
+        batchsize  = 16,
+        chunk_len  = 100,
+        chunk_ovlp = 20,
+        
+    singularity:
+        "docker://nanozoo/medaka"
+    shell:
+        """
+        medaka features {input.calls2draft} {output} \
+        --truth {input.truth2draft} \
+        --threads {threads} \
+        --regions {params.paired_refname_and_trian_end} \
+        --batch_size {params.batchsize} \
+        --chunk_len {params.chunk_len} \
+        --chunk_ovlp {params.chunk_ovlp}
+ #       dtypes={params.genomes}
+        """
+        
+rule medaka_train:
+    input:
+        features = "medaka_pipeline_outputs/features/hiv_train_features.hdf5",
+    output:
+        weights  = "medaka_pipeline_outputs/weights/hiv_medaka_weights.hdf5"
+    threads: 8
+    resources:
+        # NOTE: currently we will only use at most a single GPU
+        gpu = 1
+    params:
+        epochs     = 20,
+        train_name = directory("medaka_pipeline_outputs/weights"),
+    singularity:
+        "docker://nanozoo/medaka"
+    shell:
+        """
+        medaka train {input.features} --train_name {params.train_name} --epochs {params.epochs}
+        
+        mv {params.train_name}/model.best.val_cat_acc.hdf5 {output}
+        """

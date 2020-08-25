@@ -1,0 +1,27 @@
+rule combine_hiv_drafts:
+    input:
+        calls2draft = expand("medaka_pipeline_outputs/guppy/assembly/racon/align/{genomes}_calls2draft.bam",
+                             genomes = config["genomes"]),
+                             
+        truth2draft = expand("medaka_pipeline_outputs/guppy/assembly/racon/align/{genomes}_truth2draft.bam",
+                             genomes = config["genomes"])
+    output:
+        combined_calls = "medaka_pipeline_outputs/guppy/assembly/racon/align/combined_calls2draft.bam",
+        combined_truth = "medaka_pipeline_outputs/guppy/assembly/racon/align/combined_truth2draft.bam",
+    singularity:
+        "docker://biocontainers/samtools:v1.9-4-deb_cv1"
+    shell:
+        """
+        #########################
+        # Calls2draft
+        #########################
+        samtools merge {output.combined_calls} {input.calls2draft}
+        samtools index {output.combined_calls}
+        
+        
+        #########################
+        # Truth2draft
+        #########################
+        samtools merge {output.combined_truth} {input.truth2draft}
+        samtools index {output.combined_truth}
+        """

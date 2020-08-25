@@ -1,0 +1,38 @@
+# Snake file number 1 
+
+rule guppy_basecall:
+    input:
+        "{genomes}"
+#        "/data/nanopore/nanopore/Mele01/fast5_pass/{genomes}/"
+    output:
+        fastq = "medaka_pipeline_outputs/guppy/{genomes}.fastq",
+    params:
+        outdir = directory("medaka_pipeline_outputs/guppy"),
+        CUDA_VISIBLE_DEVICES = 1
+    singularity:
+        "docker://genomicpariscentre/guppy-gpu",
+    resources:
+        gpu = 1
+    threads: 5
+    shell:
+        """
+        #################################################################################
+        # If you get a "CUDA_ERROR_UNKNOWN" error, it's likely that CUDA 9.0 doesn't 
+        # play nicely with your GPU. CUDA_VISIBLE_DEVICES points to whatever GPU you
+        # want to run guppy_basecaller with. Regardless of CUDA_VISIBLE_DEVICES's value, 
+        # your designated GPU becomes cuda:0, so there's no need to edit the -x arugment
+        #################################################################################
+        
+        # Designate whatever GPU you want guppy to use
+        CUDA_VISIBLE_DEVICES={params.CUDA_VISIBLE_DEVICES}
+        
+        # Basecall fast5 files
+        guppy_basecaller -s {params.outdir} -r -i {input} -c dna_r9.4.1_450bps_hac.cfg -x cuda:0
+        
+        # merge resulting fastqs
+        cat {params.outdir}/*fastq > {output}
+        
+        # remove intermediate fastqs and logs
+        rm {params.outdir}/*log
+        rm {params.outdir}/fastq*fastq
+        """

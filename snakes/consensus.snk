@@ -1,0 +1,40 @@
+# START HERE
+
+rule create_medaka_consensus:
+    input:
+        draft     = "medaka_pipeline_outputs/guppy/assembly/racon/{genomes}_polished_assembly.fa",
+        basecalls = "medaka_pipeline_outputs/guppy/{genomes}.fastq",
+        weights   = "medaka_pipeline_outputs/weights/hiv_medaka_weights.hdf5"
+    output:
+        consensus = "medaka_pipeline_outputs/guppy/assembly/racon/medaka/{genomes}_consensus.fa",
+    threads: 8
+    resources:
+        gpu = 1
+    params:
+        weights    = "medaka_pipeline_outputs/weights/hiv_medaka_weights.hdf5",
+        output_dir = "medaka_pipeline_outputs/guppy/assembly/racon/medaka"
+    singularity:
+        "docker://nanozoo/medaka"
+    shell:
+        """
+        #Check to see if a GPU is being used
+        if [ "{resources.gpu}" != "0" ];then
+            GPU="cuda:0"
+            echo "Runnning on host $HOSTNAME with GPU $GPU"
+        else
+            GPU=""
+            echo "Runnning on host $HOSTNAME without GPU."
+        fi
+
+        CUDA_VISIBLE_DEVICES=$GPU 
+        
+        # If no weights, use r941_min_high_g340_rle
+        medaka_consensus -i {input.basecalls} -d {input.draft} -o {params.output_dir} -t {threads} -m {params.weights}
+        sleep 5
+        
+        # rm large intermediates
+        rm {params.output_dir}/calls_to_draft.bam* {params.output_dir}/consensus_probs.hdf
+        
+        # Mv to proper folder
+        mv {params.output_dir}/consensus.fasta {output}
+        """
