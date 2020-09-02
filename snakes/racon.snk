@@ -5,18 +5,19 @@ rule racon:
     output:
         polished  = "medaka_pipeline_outputs/guppy/assembly/racon/{genomes}_polished_assembly.fa",
     params:
-        directory("medaka_pipeline_outputs/guppy/assembly")
+        directory("medaka_pipeline_outputs/guppy/assembly/racon")
     threads: 8
     singularity:
         "docker://nanozoo/pomoxis"
     resources:
-        gpu = 0
+        gpu = 1
     shell:
         """ 
         # snakemake will create the output dir, mini_assemble will fail if it exists..
         mini_assemble -i {input.basecalls} -r {input.draft} -o racon -t {threads} -p assm -m 2
         
         # move directory to guppy and rename output
-        mv racon {params}
-        mv {params}/racon/assm_final.fa {output}
+        mv racon/* {params}
+        mv {params}/assm_final.fa {output}
+        rm -rf racon
         """
